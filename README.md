@@ -1,24 +1,27 @@
-# CareLog — Prototype
+# CareLog — Interactive Prototype
 
-A single-file prototype for CareLog, a caregiver-facing daily log for medications, vitals, meals, mood, and sleep.
+Handoff bundle from Claude Design, implemented as a static React prototype (UMD React 18 + Babel standalone, no build step).
 
 ## Run
 
-Open `index.html` in any modern browser — no build step, no dependencies.
+Serve the folder over HTTP and open `index.html`:
 
-## What's in it
+```bash
+python3 -m http.server 8000
+# then visit http://localhost:8000
+```
 
-- **Today dashboard** — KPI row (adherence, sleep, resting HR, mood) with at-a-glance trend deltas.
-- **Timeline** — mixed manual and auto-captured entries (BP cuff, glucose) with contributor tags.
-- **Weekly wellbeing ring** — composite score with legend (adherence, sleep, activity, mood).
-- **Quick log** — one-tap entry for medication, meal, vitals, mood.
-- **Up next** — schedule with a live "now" slot.
+(Opening `index.html` directly via `file://` won't load the `.jsx` scripts due to CORS.)
 
-## Design notes
+## Structure
 
-- Type pairing: Fraunces (display) + Inter (UI).
-- Color system uses OKLCH tokens with semantic accents (mint/cool/warm/rose).
-- Fully responsive; collapses sidebar below 900px.
-- Respects `prefers-color-scheme` and `prefers-reduced-motion`.
-
-This is intentionally a single static HTML file so the prototype can be shared and previewed anywhere.
+- `index.html` — entry, loads React + Babel from CDN and the JSX modules
+- `tokens.jsx` — design tokens (color, type, spacing)
+- `store.jsx` — shared app state
+- `frame.jsx` / `android-frame.jsx` — device frames
+- `caregiver.jsx` — caregiver surface
+- `guardian.jsx` — guardian surface
+- `companion.jsx` — companion surface
+- `settings.jsx` — settings surface
+- `design-canvas.jsx` — design canvas view
+- `app.jsx` — top-level app shell and routing

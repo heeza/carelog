@@ -31,6 +31,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.carelog.core.model.UserRole
 import com.carelog.core.ui.theme.CareLogColors
+import com.carelog.core.ui.theme.careLogDescription
 import com.carelog.core.ui.theme.careLogTouchTarget
 
 @Composable
@@ -57,7 +58,9 @@ fun PhoneLoginScreen(
             value = state.phone,
             onValueChange = viewModel::updatePhone,
             label = { Text("전화번호") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .careLogDescription("전화번호 입력")
         )
         state.error?.let {
             Spacer(Modifier.height(8.dp))
@@ -69,7 +72,10 @@ fun PhoneLoginScreen(
                 viewModel.requestOtp()
             },
             enabled = !state.isLoading,
-            modifier = Modifier.fillMaxWidth().careLogTouchTarget(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .careLogTouchTarget()
+                .careLogDescription("인증 요청 버튼"),
             colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Accent)
         ) {
             Text(if (state.isLoading) "요청중" else "인증")
@@ -101,7 +107,9 @@ fun OtpVerifyScreen(
             value = state.otp,
             onValueChange = viewModel::updateOtp,
             label = { Text("인증번호") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .careLogDescription("인증번호 입력")
         )
         state.error?.let {
             Spacer(Modifier.height(8.dp))
@@ -113,7 +121,10 @@ fun OtpVerifyScreen(
                 viewModel.verifyOtp()
             },
             enabled = !state.isLoading,
-            modifier = Modifier.fillMaxWidth().careLogTouchTarget(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .careLogTouchTarget()
+                .careLogDescription("인증 확인 버튼"),
             colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Accent)
         ) {
             Text(if (state.isLoading) "확인중" else "확인")
@@ -177,7 +188,10 @@ private fun RoleCard(title: String, subtitle: String, onClick: () -> Unit) {
             }
             Button(
                 onClick = onClick,
-                modifier = Modifier.width(96.dp).careLogTouchTarget(),
+                modifier = Modifier
+                    .width(96.dp)
+                    .careLogTouchTarget()
+                    .careLogDescription("$title 선택 버튼"),
                 colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.AccentSoft, contentColor = CareLogColors.AccentDeep)
             ) {
                 Text("선택")
@@ -235,7 +249,10 @@ private fun CircleContent(
             Button(
                 onClick = onCreate,
                 enabled = !isLoading,
-                modifier = Modifier.fillMaxWidth().careLogTouchTarget(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .careLogTouchTarget()
+                    .careLogDescription("가족 써클 생성 버튼"),
                 colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Accent)
             ) { Text(if (isLoading) "생성중" else "생성") }
             if (inviteCode.isNotBlank()) {
@@ -249,13 +266,18 @@ private fun CircleContent(
                 value = joinCode,
                 onValueChange = { joinCode = it.uppercase() },
                 label = { Text("초대코드") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .careLogDescription("초대코드 입력")
             )
             Spacer(Modifier.height(16.dp))
             Button(
                 onClick = { onJoin(joinCode) },
                 enabled = !isLoading,
-                modifier = Modifier.fillMaxWidth().careLogTouchTarget(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .careLogTouchTarget()
+                    .careLogDescription("써클 참여 버튼"),
                 colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Accent)
             ) { Text(if (isLoading) "참여중" else "참여") }
         }

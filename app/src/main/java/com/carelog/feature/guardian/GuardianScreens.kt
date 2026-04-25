@@ -26,8 +26,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.carelog.core.data.SupabaseConnectionState
 import com.carelog.core.model.EmergencyStatus
 import com.carelog.core.ui.theme.CareLogColors
+import com.carelog.core.ui.theme.careLogDescription
 import com.carelog.core.ui.theme.careLogTouchTarget
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -41,12 +43,21 @@ fun GuardianHomeScreen(
 ) {
     val timeline by viewModel.timeline.collectAsStateWithLifecycle()
     val activeEmergency by viewModel.activeEmergency.collectAsStateWithLifecycle()
+    val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier.fillMaxSize().background(CareLogColors.Bg).padding(20.dp)
     ) {
         Text("홈", style = MaterialTheme.typography.headlineLarge)
         Spacer(Modifier.height(12.dp))
+        if (connectionState != SupabaseConnectionState.CONNECTED) {
+            Text(
+                "연결 상태: ${connectionState.asKoreanLabel()}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = CareLogColors.Danger
+            )
+            Spacer(Modifier.height(8.dp))
+        }
         if (activeEmergency != null) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -55,7 +66,7 @@ fun GuardianHomeScreen(
                     Spacer(Modifier.height(8.dp))
                     Button(
                         onClick = onAlert,
-                        modifier = Modifier.fillMaxWidth().careLogTouchTarget(),
+                        modifier = Modifier.fillMaxWidth().careLogTouchTarget().careLogDescription("응급 확인 화면 이동 버튼"),
                         colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Danger)
                     ) {
                         Text("확인")
@@ -68,12 +79,12 @@ fun GuardianHomeScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
                 onClick = onTimeline,
-                modifier = Modifier.weight(1f).careLogTouchTarget(),
+                modifier = Modifier.weight(1f).careLogTouchTarget().careLogDescription("타임라인 화면 이동 버튼"),
                 colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Accent)
             ) { Text("기록") }
             Button(
                 onClick = onSettings,
-                modifier = Modifier.weight(1f).careLogTouchTarget(),
+                modifier = Modifier.weight(1f).careLogTouchTarget().careLogDescription("설정 화면 이동 버튼"),
                 colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Surface, contentColor = CareLogColors.Ink)
             ) { Text("설정") }
         }
@@ -116,7 +127,7 @@ fun GuardianTimelineScreen(
         Spacer(Modifier.height(12.dp))
         Button(
             onClick = onBack,
-            modifier = Modifier.fillMaxWidth().careLogTouchTarget(),
+            modifier = Modifier.fillMaxWidth().careLogTouchTarget().careLogDescription("타임라인 뒤로가기 버튼"),
             colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Surface, contentColor = CareLogColors.Ink)
         ) { Text("뒤로") }
         Spacer(Modifier.height(12.dp))
@@ -168,7 +179,7 @@ fun GuardianAlertScreen(
             Button(
                 onClick = { viewModel.acknowledgeEmergency(emergency.id) },
                 enabled = !uiState.isSubmitting,
-                modifier = Modifier.fillMaxWidth().careLogTouchTarget(),
+                modifier = Modifier.fillMaxWidth().careLogTouchTarget().careLogDescription("응급 확인 버튼"),
                 colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Accent)
             ) { Text(if (uiState.isSubmitting) "확인중" else "확인") }
         }
@@ -178,12 +189,12 @@ fun GuardianAlertScreen(
                 val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$caregiverPhone"))
                 context.startActivity(intent)
             },
-            modifier = Modifier.fillMaxWidth().careLogTouchTarget(),
+            modifier = Modifier.fillMaxWidth().careLogTouchTarget().careLogDescription("돌봄자 전화 버튼"),
             colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Danger)
         ) { Text("전화") }
         Button(
             onClick = onBack,
-            modifier = Modifier.fillMaxWidth().careLogTouchTarget(),
+            modifier = Modifier.fillMaxWidth().careLogTouchTarget().careLogDescription("알림 닫기 버튼"),
             colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Surface, contentColor = CareLogColors.Ink)
         ) { Text("닫기") }
 
@@ -194,6 +205,11 @@ fun GuardianAlertScreen(
 }
 
 private fun Any.asKoreanLabel(): String = when (this) {
+    SupabaseConnectionState.UNAVAILABLE -> "미설정"
+    SupabaseConnectionState.OFFLINE -> "오프라인"
+    SupabaseConnectionState.CONNECTING -> "연결중"
+    SupabaseConnectionState.CONNECTED -> "정상"
+    SupabaseConnectionState.ERROR -> "오류"
     com.carelog.core.model.MealStatus.COMPLETED -> "완료"
     com.carelog.core.model.MealStatus.PARTIAL -> "일부"
     com.carelog.core.model.MealStatus.MISSED -> "미완"

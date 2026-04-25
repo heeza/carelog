@@ -2,6 +2,7 @@ package com.carelog.feature.guardian
 
 import com.carelog.core.data.AuthRepository
 import com.carelog.core.data.CareRepository
+import com.carelog.core.data.SupabaseConnectionState
 import com.carelog.core.model.CareLog
 import com.carelog.core.model.ConditionStatus
 import com.carelog.core.model.Emergency
@@ -25,6 +26,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
@@ -68,6 +70,17 @@ class GuardianViewModelTest {
 
         assertEquals("ack failed", viewModel.uiState.value.error)
     }
+
+    @Test
+    fun timelineLoad_exposesRepositoryTimeline() = runTest {
+        val auth = FakeAuthRepositoryForGuardian()
+        val care = FakeCareRepositoryForGuardian()
+        val viewModel = GuardianViewModel(auth, care)
+
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(viewModel.timeline.value.isNotEmpty())
+    }
 }
 
 private class FakeAuthRepositoryForGuardian : AuthRepository {
@@ -107,7 +120,9 @@ private class FakeCareRepositoryForGuardian(
             )
         )
     )
-    private val timelineFlow = MutableStateFlow<List<TimelineItem>>(emptyList())
+    private val timelineFlow = MutableStateFlow<List<TimelineItem>>(
+        listOf(TimelineItem(log = logFlow.value.first()))
+    )
     private val emergency = Emergency(
         id = "em-1",
         circleId = "circle-1",
@@ -116,8 +131,10 @@ private class FakeCareRepositoryForGuardian(
         status = EmergencyStatus.ACTIVE
     )
     private val _activeEmergency = MutableStateFlow<Emergency?>(emergency)
+    private val _connectionState = MutableStateFlow(SupabaseConnectionState.CONNECTED)
 
     override val activeEmergency: StateFlow<Emergency?> = _activeEmergency.asStateFlow()
+    override val connectionState: StateFlow<SupabaseConnectionState> = _connectionState.asStateFlow()
     override fun observeLogs(circleId: String): Flow<List<CareLog>> = logFlow
     override fun observeTimeline(circleId: String): Flow<List<TimelineItem>> = timelineFlow
 
@@ -143,4 +160,10 @@ private class FakeCareRepositoryForGuardian(
         _activeEmergency.value = _activeEmergency.value?.copy(status = EmergencyStatus.ACKNOWLEDGED)
         return Result.success(Unit)
     }
+
+    override suspend fun syncPendingWrites(): Result<Unit> = Result.success(Unit)
+
+    override fun schedulePendingSync() = Unit
+
+    override suspend fun requestEmergencySmsFallback(emergencyId: String): Result<Unit> = Result.success(Unit)
 }

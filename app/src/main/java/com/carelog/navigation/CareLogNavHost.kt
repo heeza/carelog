@@ -2,9 +2,6 @@ package com.carelog.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
@@ -24,6 +21,7 @@ import com.carelog.feature.guardian.GuardianAlertScreen
 import com.carelog.feature.guardian.GuardianHomeScreen
 import com.carelog.feature.guardian.GuardianTimelineScreen
 import com.carelog.feature.settings.SettingsScreen
+import com.carelog.feature.settings.SettingsViewModel
 
 private object Route {
     const val Phone = "auth_phone"
@@ -47,10 +45,14 @@ private object Route {
 fun CareLogNavHost() {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = hiltViewModel()
+    val settingsViewModel: SettingsViewModel = hiltViewModel()
     val session by authViewModel.session.collectAsStateWithLifecycle()
-    var largeText by remember { mutableStateOf(false) }
+    val uiSettings by settingsViewModel.settings.collectAsStateWithLifecycle()
 
-    CareLogTheme(largeText = largeText) {
+    CareLogTheme(
+        largeText = uiSettings.largeText,
+        highContrast = uiSettings.highContrast
+    ) {
         val startDestination = when {
             session == null -> Route.Phone
             session?.role == UserRole.CAREGIVER -> Route.CaregiverHome
@@ -116,8 +118,10 @@ fun CareLogNavHost() {
 
             composable(Route.Settings) {
                 SettingsScreen(
-                    largeText = largeText,
-                    onLargeTextChanged = { largeText = it },
+                    largeText = uiSettings.largeText,
+                    highContrast = uiSettings.highContrast,
+                    onLargeTextChanged = settingsViewModel::setLargeText,
+                    onHighContrastChanged = settingsViewModel::setHighContrast,
                     onBack = { navController.popBackStack() }
                 )
             }

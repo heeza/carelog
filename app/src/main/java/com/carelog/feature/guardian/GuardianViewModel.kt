@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.carelog.core.data.AuthRepository
 import com.carelog.core.data.CareRepository
+import com.carelog.core.data.SupabaseConnectionState
 import com.carelog.core.model.Emergency
 import com.carelog.core.model.TimelineItem
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,6 +35,7 @@ class GuardianViewModel @Inject constructor(
 
     val timeline: StateFlow<List<TimelineItem>> = careRepository.observeTimeline(circleId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val connectionState: StateFlow<SupabaseConnectionState> = careRepository.connectionState
 
     val activeEmergency: StateFlow<Emergency?> = careRepository.activeEmergency
         .map { emergency -> emergency?.takeIf { it.circleId == circleId } }

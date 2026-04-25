@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.carelog.core.data.AuthRepository
 import com.carelog.core.data.CareRepository
+import com.carelog.core.data.SupabaseConnectionState
 import com.carelog.core.model.CareLog
 import com.carelog.core.model.ConditionStatus
+import com.carelog.core.model.EmergencyStatus
 import com.carelog.core.model.EmergencyType
 import com.carelog.core.model.IssueType
 import com.carelog.core.model.MealStatus
@@ -17,6 +19,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 data class CaregiverUiState(
@@ -32,6 +35,10 @@ class CaregiverViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val careRepository: CareRepository
 ) : ViewModel() {
+    private companion object {
+        const val EMERGENCY_ACK_TIMEOUT_MILLIS = 60_000L
+    }
+
     private val _uiState = MutableStateFlow(CaregiverUiState())
     val uiState: StateFlow<CaregiverUiState> = _uiState.asStateFlow()
 
@@ -43,6 +50,7 @@ class CaregiverViewModel @Inject constructor(
 
     val logs: StateFlow<List<CareLog>> = careRepository.observeLogs(circleId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val connectionState: StateFlow<SupabaseConnectionState> = careRepository.connectionState
 
     fun saveLog(
         meal: MealStatus,
@@ -73,12 +81,21 @@ class CaregiverViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isEmergencySending = true, message = null)
             careRepository.triggerEmergency(circleId, userId, type, note)
-                .onSuccess {
+                .onSuccess { emergency ->
                     _uiState.value = _uiState.value.copy(
                         isEmergencySending = false,
                         emergencySent = true,
                         message = "응급 전송"
                     )
+                    viewModelScope.launch {
+                        delay(EMERGENCY_ACK_TIMEOUT_MILLIS)
+                        val active = careRepository.activeEmergency.value
+                        if (active?.id == emergency.id && active.status == EmergencyStatus.ACTIVE) {
+                            careRepository.requestEmergencySmsFallback(emergency.id).onFailure {
+                                _uiState.value = _uiState.value.copy(message = it.message ?: "ACK 지연")
+                            }
+                        }
+                    }
                 }
                 .onFailure {
                     _uiState.value = _uiState.value.copy(

@@ -29,12 +29,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.carelog.core.data.SupabaseConnectionState
 import com.carelog.core.model.ConditionStatus
 import com.carelog.core.model.EmergencyType
 import com.carelog.core.model.IssueType
 import com.carelog.core.model.MealStatus
 import com.carelog.core.model.MedicationStatus
 import com.carelog.core.ui.theme.CareLogColors
+import com.carelog.core.ui.theme.careLogDescription
 import com.carelog.core.ui.theme.careLogTouchTarget
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -47,29 +49,38 @@ fun CaregiverHomeScreen(
     viewModel: CaregiverViewModel = hiltViewModel()
 ) {
     val logs by viewModel.logs.collectAsStateWithLifecycle()
+    val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     Column(
         modifier = Modifier.fillMaxSize().background(CareLogColors.Bg).padding(20.dp)
     ) {
         Text("홈", style = MaterialTheme.typography.headlineLarge)
         Spacer(Modifier.height(12.dp))
+        if (connectionState != SupabaseConnectionState.CONNECTED) {
+            Text(
+                "연결 상태: ${connectionState.asKoreanLabel()}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = CareLogColors.Danger
+            )
+            Spacer(Modifier.height(8.dp))
+        }
         Text("오늘 기록 ${logs.size}건", style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
                 onClick = onLog,
-                modifier = Modifier.weight(1f).careLogTouchTarget(),
+                modifier = Modifier.weight(1f).careLogTouchTarget().careLogDescription("기록 화면 이동 버튼"),
                 colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Accent)
             ) { Text("기록") }
             Button(
                 onClick = onEmergency,
-                modifier = Modifier.weight(1f).careLogTouchTarget(),
+                modifier = Modifier.weight(1f).careLogTouchTarget().careLogDescription("응급 화면 이동 버튼"),
                 colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Danger)
             ) { Text("응급") }
         }
         Spacer(Modifier.height(12.dp))
         Button(
             onClick = onSettings,
-            modifier = Modifier.fillMaxWidth().careLogTouchTarget(),
+            modifier = Modifier.fillMaxWidth().careLogTouchTarget().careLogDescription("설정 화면 이동 버튼"),
             colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Surface, contentColor = CareLogColors.Ink)
         ) {
             Text("설정")
@@ -128,7 +139,7 @@ fun CaregiverLogScreen(
             value = note,
             onValueChange = { note = it },
             label = { Text("메모") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().careLogDescription("기록 메모 입력")
         )
         uiState.message?.let {
             Spacer(Modifier.height(8.dp))
@@ -140,7 +151,7 @@ fun CaregiverLogScreen(
                 viewModel.saveLog(meal, medication, condition, issue, note)
             },
             enabled = !uiState.isSaving,
-            modifier = Modifier.fillMaxWidth().careLogTouchTarget(),
+            modifier = Modifier.fillMaxWidth().careLogTouchTarget().careLogDescription("기록 저장 버튼"),
             colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Accent)
         ) {
             Text(if (uiState.isSaving) "저장중" else "저장")
@@ -158,7 +169,7 @@ private fun <T> ToggleRow(label: String, items: List<T>, selected: T, onSelect: 
                 val selectedItem = item == selected
                 Button(
                     onClick = { onSelect(item) },
-                    modifier = Modifier.weight(1f).careLogTouchTarget(),
+                    modifier = Modifier.weight(1f).careLogTouchTarget().careLogDescription("$label ${item.asKoreanLabel()} 선택"),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (selectedItem) CareLogColors.AccentSoft else CareLogColors.Surface,
                         contentColor = if (selectedItem) CareLogColors.AccentDeep else CareLogColors.InkMuted
@@ -196,7 +207,7 @@ fun CaregiverEmergencyScreen(
             value = note,
             onValueChange = { note = it },
             label = { Text("메모") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().careLogDescription("응급 메모 입력")
         )
         uiState.message?.let {
             Spacer(Modifier.height(8.dp))
@@ -208,7 +219,7 @@ fun CaregiverEmergencyScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
                 onClick = onBack,
-                modifier = Modifier.weight(1f).careLogTouchTarget(),
+                modifier = Modifier.weight(1f).careLogTouchTarget().careLogDescription("응급 취소 버튼"),
                 colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Surface, contentColor = CareLogColors.Ink)
             ) { Text("취소") }
             Button(
@@ -216,7 +227,7 @@ fun CaregiverEmergencyScreen(
                     viewModel.triggerEmergency(selected, note)
                 },
                 enabled = !uiState.isEmergencySending,
-                modifier = Modifier.weight(1f).careLogTouchTarget(),
+                modifier = Modifier.weight(1f).careLogTouchTarget().careLogDescription("응급 전송 버튼"),
                 colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Danger)
             ) { Text(if (uiState.isEmergencySending) "전송중" else "전송") }
         }
@@ -224,6 +235,11 @@ fun CaregiverEmergencyScreen(
 }
 
 private fun Any.asKoreanLabel(): String = when (this) {
+    SupabaseConnectionState.UNAVAILABLE -> "미설정"
+    SupabaseConnectionState.OFFLINE -> "오프라인"
+    SupabaseConnectionState.CONNECTING -> "연결중"
+    SupabaseConnectionState.CONNECTED -> "정상"
+    SupabaseConnectionState.ERROR -> "오류"
     MealStatus.COMPLETED -> "완료"
     MealStatus.PARTIAL -> "일부"
     MealStatus.MISSED -> "미완"

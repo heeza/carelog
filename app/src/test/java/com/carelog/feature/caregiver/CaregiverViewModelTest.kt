@@ -2,6 +2,7 @@ package com.carelog.feature.caregiver
 
 import com.carelog.core.data.AuthRepository
 import com.carelog.core.data.CareRepository
+import com.carelog.core.data.SupabaseConnectionState
 import com.carelog.core.model.CareLog
 import com.carelog.core.model.ConditionStatus
 import com.carelog.core.model.Emergency
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -94,6 +96,20 @@ class CaregiverViewModelTest {
         assertTrue(viewModel.uiState.value.emergencySent)
         assertFalse(viewModel.uiState.value.isEmergencySending)
     }
+
+    @Test
+    fun triggerEmergencyAckTimeout_requestsSmsFallbackSkeleton() = runTest {
+        val auth = FakeAuthRepositoryForCaregiver()
+        val care = FakeCareRepositoryForCaregiver()
+        val viewModel = CaregiverViewModel(auth, care)
+
+        viewModel.triggerEmergency(EmergencyType.FALL, "urgent")
+        dispatcher.scheduler.advanceUntilIdle()
+        dispatcher.scheduler.advanceTimeBy(60_000L)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(care.smsFallbackRequested)
+    }
 }
 
 private class FakeAuthRepositoryForCaregiver : AuthRepository {
@@ -124,6 +140,9 @@ private class FakeCareRepositoryForCaregiver(
     private val logsFlow = MutableStateFlow<List<CareLog>>(emptyList())
     private val activeEmergencyFlow = MutableStateFlow<Emergency?>(null)
     override val activeEmergency: StateFlow<Emergency?> = activeEmergencyFlow.asStateFlow()
+    override val connectionState: StateFlow<SupabaseConnectionState> =
+        MutableStateFlow(SupabaseConnectionState.CONNECTED).asStateFlow()
+    var smsFallbackRequested: Boolean = false
 
     override fun observeLogs(circleId: String): Flow<List<CareLog>> = logsFlow
 
@@ -169,4 +188,13 @@ private class FakeCareRepositoryForCaregiver(
     }
 
     override suspend fun acknowledgeEmergency(emergencyId: String): Result<Unit> = Result.success(Unit)
+
+    override suspend fun syncPendingWrites(): Result<Unit> = Result.success(Unit)
+
+    override fun schedulePendingSync() = Unit
+
+    override suspend fun requestEmergencySmsFallback(emergencyId: String): Result<Unit> {
+        smsFallbackRequested = true
+        return Result.failure(IllegalStateException("ACK 지연: SMS 대체 알림 스켈레톤 트리거"))
+    }
 }

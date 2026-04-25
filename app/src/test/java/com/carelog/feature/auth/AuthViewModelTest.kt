@@ -60,6 +60,20 @@ class AuthViewModelTest {
     }
 
     @Test
+    fun verifyOtpSuccess_setsSession() = runTest {
+        val repo = FakeAuthRepositoryForTest()
+        val viewModel = AuthViewModel(repo)
+
+        viewModel.updatePhone("01012341234")
+        viewModel.updateOtp("123456")
+        viewModel.verifyOtp()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertNotNull(viewModel.uiState.value.session)
+        assertEquals("01012341234", viewModel.uiState.value.session?.phone)
+    }
+
+    @Test
     fun selectRoleSuccess_updatesSessionRole() = runTest {
         val repo = FakeAuthRepositoryForTest()
         val viewModel = AuthViewModel(repo)

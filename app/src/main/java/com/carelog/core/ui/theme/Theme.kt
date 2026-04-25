@@ -31,6 +31,20 @@ private val DarkColors = darkColorScheme(
     error = CareLogColors.Danger
 )
 
+private val HighContrastColors = lightColorScheme(
+    primary = CareLogColors.Ink,
+    onPrimary = CareLogColors.Surface,
+    secondary = CareLogColors.AccentDeep,
+    onSecondary = CareLogColors.Surface,
+    background = CareLogColors.Surface,
+    onBackground = CareLogColors.Ink,
+    surface = CareLogColors.Surface,
+    onSurface = CareLogColors.Ink,
+    error = CareLogColors.Danger,
+    onError = CareLogColors.Surface,
+    outline = CareLogColors.Ink
+)
+
 data class CareLogDimensions(
     val minTouchTarget: Dp = 56.dp
 )
@@ -40,11 +54,16 @@ val LocalCareLogDimensions = staticCompositionLocalOf { CareLogDimensions() }
 @Composable
 fun CareLogTheme(
     largeText: Boolean = false,
+    highContrast: Boolean = false,
     darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
+        colorScheme = when {
+            highContrast -> HighContrastColors
+            darkTheme -> DarkColors
+            else -> LightColors
+        },
         typography = careLogTypography(largeText),
         shapes = CareLogShapes,
         content = content

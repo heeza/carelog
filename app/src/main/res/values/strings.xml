@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">CareLog</string>
+    <string name="placeholder_caregiver_name">김영숙</string>
+    <string name="placeholder_guardian_name">박지수</string>
+</resources>

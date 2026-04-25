@@ -18,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +39,9 @@ fun PhoneLoginScreen(
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(state.otpRequested) {
+        if (state.otpRequested) onNext()
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -63,12 +67,12 @@ fun PhoneLoginScreen(
         Button(
             onClick = {
                 viewModel.requestOtp()
-                onNext()
             },
+            enabled = !state.isLoading,
             modifier = Modifier.fillMaxWidth().careLogTouchTarget(),
             colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Accent)
         ) {
-            Text("인증")
+            Text(if (state.isLoading) "요청중" else "인증")
         }
     }
 }
@@ -79,6 +83,9 @@ fun OtpVerifyScreen(
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(state.session?.userId) {
+        if (state.session != null) onNext()
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -96,16 +103,20 @@ fun OtpVerifyScreen(
             label = { Text("인증번호") },
             modifier = Modifier.fillMaxWidth()
         )
+        state.error?.let {
+            Spacer(Modifier.height(8.dp))
+            Text(it, color = CareLogColors.Danger, style = MaterialTheme.typography.bodyMedium)
+        }
         Spacer(Modifier.height(20.dp))
         Button(
             onClick = {
                 viewModel.verifyOtp()
-                onNext()
             },
+            enabled = !state.isLoading,
             modifier = Modifier.fillMaxWidth().careLogTouchTarget(),
             colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Accent)
         ) {
-            Text("확인")
+            Text(if (state.isLoading) "확인중" else "확인")
         }
     }
 }
@@ -182,16 +193,19 @@ fun CircleSetupScreen(
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(state.session?.circleId) {
+        if (state.session?.circleId != null) onDone()
+    }
     CircleContent(
         role = role,
+        isLoading = state.isLoading,
+        error = state.error,
         inviteCode = state.session?.circleInviteCode.orEmpty(),
         onCreate = {
             viewModel.createCircle("가족써클")
-            onDone()
         },
         onJoin = { code ->
             viewModel.joinCircle(code)
-            onDone()
         }
     )
 }
@@ -199,6 +213,8 @@ fun CircleSetupScreen(
 @Composable
 private fun CircleContent(
     role: UserRole,
+    isLoading: Boolean,
+    error: String?,
     inviteCode: String,
     onCreate: () -> Unit,
     onJoin: (String) -> Unit
@@ -218,9 +234,10 @@ private fun CircleContent(
             Spacer(Modifier.height(16.dp))
             Button(
                 onClick = onCreate,
+                enabled = !isLoading,
                 modifier = Modifier.fillMaxWidth().careLogTouchTarget(),
                 colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Accent)
-            ) { Text("생성") }
+            ) { Text(if (isLoading) "생성중" else "생성") }
             if (inviteCode.isNotBlank()) {
                 Spacer(Modifier.height(14.dp))
                 Text("초대코드: $inviteCode", style = MaterialTheme.typography.titleLarge)
@@ -237,9 +254,14 @@ private fun CircleContent(
             Spacer(Modifier.height(16.dp))
             Button(
                 onClick = { onJoin(joinCode) },
+                enabled = !isLoading,
                 modifier = Modifier.fillMaxWidth().careLogTouchTarget(),
                 colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Accent)
-            ) { Text("참여") }
+            ) { Text(if (isLoading) "참여중" else "참여") }
+        }
+        error?.let {
+            Spacer(Modifier.height(8.dp))
+            Text(it, color = CareLogColors.Danger, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

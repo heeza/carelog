@@ -21,7 +21,9 @@ import kotlinx.coroutines.launch
 
 data class CaregiverUiState(
     val isSaving: Boolean = false,
+    val isEmergencySending: Boolean = false,
     val message: String? = null,
+    val saveCompleted: Boolean = false,
     val emergencySent: Boolean = false,
 )
 
@@ -50,7 +52,7 @@ class CaregiverViewModel @Inject constructor(
         note: String,
     ) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSaving = true, message = null)
+            _uiState.value = _uiState.value.copy(isSaving = true, message = null, saveCompleted = false)
             careRepository.saveLog(
                 circleId = circleId,
                 authorId = userId,
@@ -60,22 +62,39 @@ class CaregiverViewModel @Inject constructor(
                 issue = issue,
                 note = note,
             ).onSuccess {
-                _uiState.value = _uiState.value.copy(isSaving = false, message = "저장 완료")
+                _uiState.value = _uiState.value.copy(isSaving = false, saveCompleted = true, message = "저장 완료")
             }.onFailure {
-                _uiState.value = _uiState.value.copy(isSaving = false, message = it.message ?: "저장 실패")
+                _uiState.value = _uiState.value.copy(isSaving = false, saveCompleted = false, message = it.message ?: "저장 실패")
             }
         }
     }
 
     fun triggerEmergency(type: EmergencyType, note: String) {
         viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isEmergencySending = true, message = null)
             careRepository.triggerEmergency(circleId, userId, type, note)
                 .onSuccess {
-                    _uiState.value = _uiState.value.copy(emergencySent = true, message = "응급 전송")
+                    _uiState.value = _uiState.value.copy(
+                        isEmergencySending = false,
+                        emergencySent = true,
+                        message = "응급 전송"
+                    )
                 }
                 .onFailure {
-                    _uiState.value = _uiState.value.copy(message = it.message ?: "응급 실패")
+                    _uiState.value = _uiState.value.copy(
+                        isEmergencySending = false,
+                        emergencySent = false,
+                        message = it.message ?: "응급 실패"
+                    )
                 }
         }
+    }
+
+    fun consumeSaveResult() {
+        _uiState.value = _uiState.value.copy(saveCompleted = false)
+    }
+
+    fun consumeEmergencySent() {
+        _uiState.value = _uiState.value.copy(emergencySent = false)
     }
 }

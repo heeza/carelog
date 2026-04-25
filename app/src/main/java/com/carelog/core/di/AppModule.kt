@@ -3,8 +3,8 @@ package com.carelog.core.di
 import com.carelog.BuildConfig
 import com.carelog.core.data.AuthRepository
 import com.carelog.core.data.CareRepository
-import com.carelog.core.data.FakeAuthRepository
-import com.carelog.core.data.InMemoryCareRepository
+import com.carelog.core.data.SupabaseAuthRepository
+import com.carelog.core.data.SupabaseCareRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,11 +22,11 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideAuthRepository(): AuthRepository = FakeAuthRepository()
+    fun provideAuthRepository(repository: SupabaseAuthRepository): AuthRepository = repository
 
     @Provides
     @Singleton
-    fun provideCareRepository(): CareRepository = InMemoryCareRepository()
+    fun provideCareRepository(repository: SupabaseCareRepository): CareRepository = repository
 
     @Provides
     @Singleton

@@ -70,25 +70,28 @@ class AuthViewModel @Inject constructor(
 
     fun selectRole(role: UserRole) {
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
             authRepository.selectRole(role)
-                .onSuccess { session -> _uiState.update { it.copy(session = session) } }
-                .onFailure { e -> _uiState.update { it.copy(error = e.message) } }
+                .onSuccess { session -> _uiState.update { it.copy(isLoading = false, session = session) } }
+                .onFailure { e -> _uiState.update { it.copy(isLoading = false, error = e.message) } }
         }
     }
 
     fun createCircle(name: String) {
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
             authRepository.createCircle(name)
-                .onSuccess { session -> _uiState.update { it.copy(session = session) } }
-                .onFailure { e -> _uiState.update { it.copy(error = e.message) } }
+                .onSuccess { session -> _uiState.update { it.copy(isLoading = false, session = session) } }
+                .onFailure { e -> _uiState.update { it.copy(isLoading = false, error = e.message) } }
         }
     }
 
     fun joinCircle(inviteCode: String) {
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
             authRepository.joinCircle(inviteCode)
-                .onSuccess { session -> _uiState.update { it.copy(session = session) } }
-                .onFailure { e -> _uiState.update { it.copy(error = e.message) } }
+                .onSuccess { session -> _uiState.update { it.copy(isLoading = false, session = session) } }
+                .onFailure { e -> _uiState.update { it.copy(isLoading = false, error = e.message) } }
         }
     }
 }

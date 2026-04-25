@@ -149,6 +149,7 @@ fun GuardianAlertScreen(
     viewModel: GuardianViewModel = hiltViewModel()
 ) {
     val activeEmergency by viewModel.activeEmergency.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     Column(
         modifier = Modifier.fillMaxSize().background(CareLogColors.Bg).padding(20.dp),
@@ -166,10 +167,12 @@ fun GuardianAlertScreen(
             }
             Button(
                 onClick = { viewModel.acknowledgeEmergency(emergency.id) },
+                enabled = !uiState.isSubmitting,
                 modifier = Modifier.fillMaxWidth().careLogTouchTarget(),
                 colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Accent)
-            ) { Text("확인") }
+            ) { Text(if (uiState.isSubmitting) "확인중" else "확인") }
         }
+        uiState.error?.let { Text(it, color = CareLogColors.Danger) }
         Button(
             onClick = {
                 val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$caregiverPhone"))

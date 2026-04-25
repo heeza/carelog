@@ -17,12 +17,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -99,43 +97,49 @@ fun CaregiverLogScreen(
     onBack: () -> Unit,
     viewModel: CaregiverViewModel = hiltViewModel()
 ) {
-    var tabIndex by remember { mutableIntStateOf(0) }
     var note by remember { mutableStateOf("") }
     var meal by remember { mutableStateOf(MealStatus.COMPLETED) }
     var medication by remember { mutableStateOf(MedicationStatus.COMPLETED) }
     var condition by remember { mutableStateOf(ConditionStatus.GOOD) }
+    var issue by remember { mutableStateOf(IssueType.NONE) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(uiState.saveCompleted) {
+        if (uiState.saveCompleted) {
+            viewModel.consumeSaveResult()
+            onBack()
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().background(CareLogColors.Bg).padding(20.dp)
     ) {
         Text("기록", style = MaterialTheme.typography.headlineLarge)
-        Spacer(Modifier.height(12.dp))
-        TabRow(selectedTabIndex = tabIndex) {
-            Tab(selected = tabIndex == 0, onClick = { tabIndex = 0 }, text = { Text("기본") })
-            Tab(selected = tabIndex == 1, onClick = { tabIndex = 1 }, text = { Text("메모") })
-        }
         Spacer(Modifier.height(16.dp))
-        if (tabIndex == 0) {
-            ToggleRow("식사", MealStatus.entries, meal) { meal = it }
-            Spacer(Modifier.height(12.dp))
-            ToggleRow("복약", MedicationStatus.entries, medication) { medication = it }
-            Spacer(Modifier.height(12.dp))
-            ToggleRow("상태", ConditionStatus.entries, condition) { condition = it }
-        } else {
-            OutlinedTextField(
-                value = note,
-                onValueChange = { note = it },
-                label = { Text("메모") },
-                modifier = Modifier.fillMaxWidth()
-            )
+        ToggleRow("식사", MealStatus.entries, meal) { meal = it }
+        Spacer(Modifier.height(12.dp))
+        ToggleRow("복약", MedicationStatus.entries, medication) { medication = it }
+        Spacer(Modifier.height(12.dp))
+        ToggleRow("상태", ConditionStatus.entries, condition) { condition = it }
+        Spacer(Modifier.height(12.dp))
+        ToggleRow("특이사항", IssueType.entries, issue) { issue = it }
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(
+            value = note,
+            onValueChange = { note = it },
+            label = { Text("메모") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        uiState.message?.let {
+            Spacer(Modifier.height(8.dp))
+            Text(it, color = if (uiState.saveCompleted) CareLogColors.Good else CareLogColors.Danger)
         }
         Spacer(Modifier.height(16.dp))
         Button(
             onClick = {
-                viewModel.saveLog(meal, medication, condition, IssueType.NONE, note)
-                onBack()
+                viewModel.saveLog(meal, medication, condition, issue, note)
             },
+            enabled = !uiState.isSaving,
             modifier = Modifier.fillMaxWidth().careLogTouchTarget(),
             colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Accent)
         ) {
@@ -174,6 +178,13 @@ fun CaregiverEmergencyScreen(
 ) {
     var selected by remember { mutableStateOf(EmergencyType.FALL) }
     var note by remember { mutableStateOf("") }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(uiState.emergencySent) {
+        if (uiState.emergencySent) {
+            viewModel.consumeEmergencySent()
+            onBack()
+        }
+    }
     Column(
         modifier = Modifier.fillMaxSize().background(CareLogColors.Bg).padding(20.dp)
     ) {
@@ -187,6 +198,10 @@ fun CaregiverEmergencyScreen(
             label = { Text("메모") },
             modifier = Modifier.fillMaxWidth()
         )
+        uiState.message?.let {
+            Spacer(Modifier.height(8.dp))
+            Text(it, color = if (uiState.emergencySent) CareLogColors.Good else CareLogColors.Danger)
+        }
         Spacer(Modifier.height(20.dp))
         Text("2단계 확인", style = MaterialTheme.typography.bodyMedium, color = CareLogColors.Danger)
         Spacer(Modifier.height(8.dp))
@@ -199,11 +214,11 @@ fun CaregiverEmergencyScreen(
             Button(
                 onClick = {
                     viewModel.triggerEmergency(selected, note)
-                    onBack()
                 },
+                enabled = !uiState.isEmergencySending,
                 modifier = Modifier.weight(1f).careLogTouchTarget(),
                 colors = ButtonDefaults.buttonColors(containerColor = CareLogColors.Danger)
-            ) { Text("전송") }
+            ) { Text(if (uiState.isEmergencySending) "전송중" else "전송") }
         }
     }
 }
@@ -217,6 +232,11 @@ private fun Any.asKoreanLabel(): String = when (this) {
     ConditionStatus.GOOD -> "좋음"
     ConditionStatus.NORMAL -> "보통"
     ConditionStatus.BAD -> "나쁨"
+    IssueType.NONE -> "없음"
+    IssueType.DIZZINESS -> "어지럼"
+    IssueType.PAIN -> "통증"
+    IssueType.LOW_APPETITE -> "식욕저하"
+    IssueType.OTHER -> "기타"
     EmergencyType.UNCONSCIOUS -> "의식"
     EmergencyType.FALL -> "낙상"
     EmergencyType.BREATHING -> "호흡"
